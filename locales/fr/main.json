@@ -933,7 +933,11 @@
       "workflow_snapshot": "Instantané du workflow",
       "working": "Traitement…",
       "your_agent_inline": "votre agent",
-      "your_agent_is_at_your_canvas": "Votre agent est aux commandes de votre canevas"
+      "your_agent_is_at_your_canvas": "Votre agent est aux commandes de votre canevas",
+      "incognito": "Navigation privée",
+      "incognito_on": "Navigation privée activée",
+      "incognito_hint_on": "Navigation privée : ACTIVÉE. Cette conversation n'est pas conservée : elle disparaît de l'historique au rechargement, et l'orchestrateur n'en garde ni session, ni transcription, ni texte dans son journal. Cliquer pour revenir au mode normal pour la PROCHAINE conversation ; ce qui a déjà été dit reste non enregistré.",
+      "incognito_hint_off": "Navigation privée : désactivée. Les conversations sont conservées dans l'historique et reprenables. Cliquer pour cesser d'enregistrer la conversation en cours."
     },
     "run_scope_guard": {
       "run_to_node_scope_was_not_applied": "la portée « exécuter jusqu'au nœud » n'a pas été appliquée ; rien n'a été mis en file d'attente"

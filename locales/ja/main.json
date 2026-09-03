@@ -853,7 +853,11 @@
       "workflow_snapshot": "ワークフローのスナップショット",
       "working": "処理中…",
       "your_agent_inline": "エージェント",
-      "your_agent_is_at_your_canvas": "エージェントがキャンバスで待機しています"
+      "your_agent_is_at_your_canvas": "エージェントがキャンバスで待機しています",
+      "incognito": "シークレット",
+      "incognito_on": "シークレット オン",
+      "incognito_hint_on": "Incognito: ON — this conversation is not kept. It leaves the history on reload, and the orchestrator records no session, transcript or log text for it. Click to return to normal for the NEXT conversation; what was already said stays unrecorded.",
+      "incognito_hint_off": "Incognito: off — conversations are kept in the history and resumable. Click to stop recording the current conversation."
     },
     "run_scope_guard": {
       "run_to_node_scope_was_not_applied": "「ノードまで実行」の範囲が適用されず、キューには何も追加されませんでした"

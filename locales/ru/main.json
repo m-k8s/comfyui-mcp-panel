@@ -973,7 +973,11 @@
       "workflow_snapshot": "Снимок воркфлоу",
       "working": "Работаю…",
       "your_agent_inline": "ваш агент",
-      "your_agent_is_at_your_canvas": "Ваш агент у вашего холста"
+      "your_agent_is_at_your_canvas": "Ваш агент у вашего холста",
+      "incognito": "Инкогнито",
+      "incognito_on": "Инкогнито включено",
+      "incognito_hint_on": "Incognito: ON — this conversation is not kept. It leaves the history on reload, and the orchestrator records no session, transcript or log text for it. Click to return to normal for the NEXT conversation; what was already said stays unrecorded.",
+      "incognito_hint_off": "Incognito: off — conversations are kept in the history and resumable. Click to stop recording the current conversation."
     },
     "run_scope_guard": {
       "run_to_node_scope_was_not_applied": "область «запуск до узла» не применена; в очередь ничего не поставлено"

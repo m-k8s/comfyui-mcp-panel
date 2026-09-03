@@ -78,6 +78,7 @@ import {
   settleVramOccupancyAfterFree,
 } from "./lib/vram-occupancy.js";
 import { nodeInstanceIdentity } from "./lib/node-identity.js";
+import { markIncognito, persistableThreads, withIncognito } from "./lib/incognito.js";
 import { describeVoiceError } from "./lib/voice-error.js";
 import { voiceRecognitionLang } from "./lib/voice-language.js";
 import { isEmbeddedDesktopShell, voiceInputSupport } from "./lib/voice-support.js";
@@ -28694,6 +28695,12 @@ const RECONNECT_MAX_MS = 15000;
 // image pixels (ToS-safe: reason about the work without receiving the images).
 let AGENT_MUTED = (() => { try { return localStorage.getItem("cmcp.muteAgents") === "1"; } catch { return false; } })();
 let AGENT_BLIND = (() => { try { return localStorage.getItem("cmcp.blindAgents") === "1"; } catch { return false; } })();
+// INCOGNITO = the conversation is not kept: the thread never reaches the durable
+// history store, and every user_message carries `incognito: true` so the
+// orchestrator keeps nothing of its own either (see lib/incognito.js). Deliberately
+// NOT persisted across reloads — a mode that silently survives a reload is the
+// opposite of what "incognito" promises about the next conversation.
+let AGENT_INCOGNITO = false;
 
 /**
  * Strip the auth token out of a bridge URL before it goes anywhere a human can
@@ -31090,15 +31097,22 @@ function createBridgeClient({ onStatus, onSay, onStream, onLog, onCommand, onCom
         // 10 wiring tests do exactly that. REVERT to the plain dotted form once the rule
         // stops scanning JS.
         sock["send"](
-          JSON.stringify({
-            type: "user_message",
-            text,
-            ...(outContext ? { context: outContext } : {}),
-            ...(images?.length ? { images: normalizeImageList(images) } : {}),
-            // Client message id — the orchestrator echoes it in the "working"
-            // ack so the panel can mark this exact bubble delivered ("Seen").
-            ...(mid ? { mid } : {}),
-          }),
+          JSON.stringify(
+            // Incognito: the flag rides on every message while the toggle is on,
+            // so the orchestrator keeps nothing of the turn either.
+            withIncognito(
+              {
+                type: "user_message",
+                text,
+                ...(outContext ? { context: outContext } : {}),
+                ...(images?.length ? { images: normalizeImageList(images) } : {}),
+                // Client message id — the orchestrator echoes it in the "working"
+                // ack so the panel can mark this exact bubble delivered ("Seen").
+                ...(mid ? { mid } : {}),
+              },
+              AGENT_INCOGNITO,
+            ),
+          ),
         );
         // Mark it sent only AFTER the send returned. sock.send() throws on a socket
         // that closed between the readyState check above and here, and stamping
@@ -31531,6 +31545,7 @@ const PANEL_CSS = `
 }
 /* Engaged gates get a colored tint so their state is readable at a glance. */
 .cmcp-toolbtn.gate-on-deafen { color: var(--p-red-400, #f87171); }
+.cmcp-toolbtn.gate-on-incognito { color: var(--p-purple-400, #c084fc); }
 .cmcp-toolbtn.gate-on-deafen svg { animation: cmcp-pulse 1s ease-in-out infinite; }
 .cmcp-toolbtn.gate-on-blind { color: var(--p-amber-400, #fbbf24); }
 .cmcp-toolbtn:disabled, .cmcp-toolbtn[data-soon] {
@@ -35893,10 +35908,32 @@ function buildPanel() {
   }
   const deafenBtn = toolbarBtn("pi-volume-up", tr("panel.deafen", "Deafen"));
   const blindBtn = toolbarBtn("pi-eye", tr("panel.blind", "Blind"));
+  const incognitoBtn = toolbarBtn("pi-user", tr("panel.incognito", "Incognito"));
   // Icon-only (user request): the glyph + tint + tooltip carry the state; the
   // label span stays in the DOM (visually hidden) for screen readers.
   deafenBtn.classList.add("cmcp-toolbtn-iconic");
   blindBtn.classList.add("cmcp-toolbtn-iconic");
+  incognitoBtn.classList.add("cmcp-toolbtn-iconic");
+  function reflectIncognito() {
+    incognitoBtn.classList.toggle("gate-on-incognito", AGENT_INCOGNITO);
+    incognitoBtn.querySelector("span").textContent = AGENT_INCOGNITO
+      ? tr("panel.incognito_on", "Incognito on")
+      : tr("panel.incognito", "Incognito");
+    incognitoBtn.title = AGENT_INCOGNITO
+      ? tr(
+          "panel.incognito_hint_on",
+          "Incognito: ON — this conversation is not kept. It leaves the history on reload, and the orchestrator records no session, transcript or log text for it. Click to return to normal for the NEXT conversation; what was already said stays unrecorded.",
+        )
+      : tr(
+          "panel.incognito_hint_off",
+          "Incognito: off — conversations are kept in the history and resumable. Click to stop recording the current conversation.",
+        );
+  }
+  incognitoBtn.onclick = () => {
+    AGENT_INCOGNITO = !AGENT_INCOGNITO;
+    reflectIncognito();
+  };
+  reflectIncognito();
   // Ear icon (Lucide-style strokes): the ear is always drawn; the slash strokes
   // toggle for the deafened state (ear vs ear-off).
   let deafenSlash;
@@ -36290,7 +36327,7 @@ function buildPanel() {
 
   const toolbarSpacer = document.createElement("span");
   toolbarSpacer.className = "cmcp-spacer";
-  toolbar.append(deafenBtn, blindBtn, toolbarSpacer, civitaiBtn, appsBtn, trainingBtn, runpodBtn);
+  toolbar.append(deafenBtn, blindBtn, incognitoBtn, toolbarSpacer, civitaiBtn, appsBtn, trainingBtn, runpodBtn);
 
   // Feature-flag the newer toolbar surfaces (Apps / Training / RunPod). Hidden by
   // default; opt in via Settings › Features. Inline display (not the `hidden`
@@ -36465,7 +36502,9 @@ function buildPanel() {
   function persistThreads({ syncAliases = true } = {}) {
     if (syncAliases) syncWorkflowAliases();
     threads = capHistoryThreads(threads);
-    historyStore.persist(threads, historyMeta, {
+    // Incognito threads stay in memory for this page's lifetime and never reach
+    // the durable store: a reload forgets them.
+    historyStore.persist(persistableThreads(threads), historyMeta, {
       protectedThreadIds: protectedHistoryThreadIds(),
       maxThreads: MAX_THREADS,
       maxMessages: MAX_THREAD_MSGS,
@@ -36846,6 +36885,9 @@ function buildPanel() {
     if (!Number(entry.createdAt)) entry.createdAt = now;
     historyStore.touchMessage(entry, now);
     thread.msgs.push(entry);
+    // A message recorded while incognito is on makes the whole thread incognito,
+    // for good: persistThreads then never writes it (lib/incognito.js).
+    markIncognito(thread, AGENT_INCOGNITO);
     if (thread.msgs.length > MAX_THREAD_MSGS) {
       thread.msgs.splice(0, thread.msgs.length - MAX_THREAD_MSGS);
     }
