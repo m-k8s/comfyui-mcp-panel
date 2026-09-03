@@ -36502,8 +36502,12 @@ function buildPanel() {
   function persistThreads({ syncAliases = true } = {}) {
     if (syncAliases) syncWorkflowAliases();
     threads = capHistoryThreads(threads);
-    // Incognito threads stay in memory for this page's lifetime and never reach
-    // the durable store: a reload forgets them.
+    // Incognito: the current thread becomes incognito the first time it is
+    // persisted while the toggle is on, for good (lib/incognito.js) — marked HERE
+    // rather than in record(), which turn-output-fence.test.mjs evaluates in
+    // isolation. Incognito threads stay in memory for this page's lifetime and
+    // never reach the durable store: a reload forgets them.
+    markIncognito(thread, AGENT_INCOGNITO);
     historyStore.persist(persistableThreads(threads), historyMeta, {
       protectedThreadIds: protectedHistoryThreadIds(),
       maxThreads: MAX_THREADS,
@@ -36885,9 +36889,6 @@ function buildPanel() {
     if (!Number(entry.createdAt)) entry.createdAt = now;
     historyStore.touchMessage(entry, now);
     thread.msgs.push(entry);
-    // A message recorded while incognito is on makes the whole thread incognito,
-    // for good: persistThreads then never writes it (lib/incognito.js).
-    markIncognito(thread, AGENT_INCOGNITO);
     if (thread.msgs.length > MAX_THREAD_MSGS) {
       thread.msgs.splice(0, thread.msgs.length - MAX_THREAD_MSGS);
     }
