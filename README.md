@@ -142,6 +142,17 @@ not stranded). The bridge is loopback-only. To run an orchestrator yourself, set
 `COMFYUI_MCP_NO_AUTOSPAWN=1`, launch it manually, then click Connect (the Bridge
 URL lives under **Advanced**).
 
+**Turning off the training routes.** Set `COMFYUI_MCP_PANEL_DISABLE_TRAINING=1`
+(`true` and `yes` work too, case-insensitive) and the pack skips
+`/comfyui_mcp_panel/training/*` at load, logging one line to say it did.
+Those routes hand a filesystem path to the trainer, which runs in *another*
+process: on a host whose ComfyUI session files are not on a disk that process
+can open (a RAM-only pod, where every generated file lives in memory behind a
+marker path), they answer with paths that resolve to nothing. The flag turns a
+late, obscure failure inside the training wizard into an explicit refusal at
+startup. Nothing else changes: the agent, the Micro-Apps and the CivitAI
+browser are untouched. Leave it unset on a normal install.
+
 Type `/` in the composer for commands — panel ones like **`/reload`** (pick up
 new code, keep the chat), **`/reload-ui`** (reload just the panel), **`/revert`**
 (undo the last turn's graph edits), **`/record-skill`** (save the open graph as a

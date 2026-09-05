@@ -137,6 +137,18 @@ def _log(msg):
     stream.write(line)
 
 
+def _env_flag(name):
+    """True when the environment variable `name` carries a truthy value.
+
+    Accepts `1`, `true` and `yes`, case-insensitive, surrounding blanks
+    stripped. Anything else is false, an empty value and an absent variable
+    included: a host that exports the name with no value does not opt in by
+    accident. Read through `environ.get`, like every other env read in this
+    file (see the import comment at the top).
+    """
+    return (environ.get(name) or "").strip().lower() in ("1", "true", "yes")
+
+
 def _launcher_config_path():
     return os.path.join(os.path.expanduser("~"), ".comfyui-mcp", "launcher.json")
 
@@ -1236,12 +1248,21 @@ def _register_routes():
 
     # Training-wizard helpers: image-ref → absolute-path resolution for dataset
     # staging, and serving training-sample images from under the training root.
-    try:
-        from .py import training_routes
+    #
+    # COMFYUI_MCP_PANEL_DISABLE_TRAINING=1 skips them entirely. Both routes hand
+    # a filesystem path to a trainer that runs in ANOTHER process, so a host that
+    # serves ComfyUI's files from somewhere that process cannot open (a RAM-only
+    # pod, where every session file lives in memory behind a marker path) gets an
+    # explicit refusal instead of paths that resolve to nothing.
+    if _env_flag("COMFYUI_MCP_PANEL_DISABLE_TRAINING"):
+        _log("training routes disabled by COMFYUI_MCP_PANEL_DISABLE_TRAINING")
+    else:
+        try:
+            from .py import training_routes
 
-        training_routes.register(routes, web)
-    except Exception as _e:  # pragma: no cover - never block panel load
-        _log("training routes not registered: {}".format(_e))
+            training_routes.register(routes, web)
+        except Exception as _e:  # pragma: no cover - never block panel load
+            _log("training routes not registered: {}".format(_e))
 
     # Micro-Apps: bundle storage under the user dir + headless run engine
     # (same HTTP surface backs the mobile app's whitelisted apps_* tools).
