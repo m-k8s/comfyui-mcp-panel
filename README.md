@@ -1,5 +1,12 @@
 # ComfyUI Agent Panel
 
+> [!NOTE]
+> **This fork is alive.** `m-k8s/comfyui-mcp-panel`, branch `custom`, is the panel we
+> run on our own ComfyUI pods, and we keep maintaining it for that use: the Incognito
+> toggle and the training-routes flag documented below are ours, and further changes
+> land here. The upstream notice that follows is Arthur Longbottom's, about the
+> project this fork came from, and it stays as written.
+
 > [!IMPORTANT]
 > **This project is no longer maintained.**
 >
