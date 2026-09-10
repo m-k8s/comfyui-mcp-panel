@@ -7548,8 +7548,13 @@ const BACKEND_EFFORTS = {
   openrouter: [],
   lmstudio: [],
   llamacpp: [],
-  // Custom endpoints ride the same openai dialect — no effort control.
-  custom: [],
+  // Custom endpoints ride the same openai dialect, but the endpoint may serve a
+  // reasoning model whose effort is a per-request field (vLLM + Qwen3.8: the
+  // chat template reads reasoning_effort). The orchestrator advertises the
+  // deployment's vouched levels on each model row (COMFYUI_MCP_OLLAMA_EFFORT_LEVELS);
+  // effortsForModel intersects them with this superset, so a deployment that
+  // vouches for nothing still hides the selector (row.efforts === []).
+  custom: ["none", "minimal", "low", "medium", "high", "xhigh", "max"],
 };
 // Ordered low→high across BOTH scales, for nearest-level mapping on a switch.
 const EFFORT_ORDER = ["none", "minimal", "low", "medium", "high", "xhigh", "max", "ultra"];
